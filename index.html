@@ -3,434 +3,621 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>YouTube Transcription</title>
+  <title>YouTube to Text</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #0f0f0f;
-      --surface: #1a1a1a;
-      --border: #2e2e2e;
-      --accent: #e8e8e8;
-      --muted: #888;
-      --red: #ff4444;
-      --green: #4caf50;
-      --blue: #4a9eff;
-      --yellow: #cca800;
-      --font: system-ui, -apple-system, sans-serif;
-      --mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      --bg:           #09090b;
+      --surface:      #18181b;
+      --surface-2:    #1f1f24;
+      --border:       #27272a;
+      --border-hi:    #3f3f46;
+      --text:         #fafafa;
+      --muted:        #a1a1aa;
+      --dim:          #52525b;
+      --accent:       #a78bfa;
+      --accent-btn:   #7c3aed;
+      --accent-hover: #6d28d9;
+      --green:        #4ade80;
+      --red:          #f87171;
+      --yellow:       #fbbf24;
+      --radius:       12px;
+      --radius-sm:    8px;
+      --font: 'Inter', system-ui, -apple-system, sans-serif;
+      --mono: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
     }
 
     body {
       background: var(--bg);
-      color: var(--accent);
+      color: var(--text);
       font-family: var(--font);
       min-height: 100vh;
       display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      padding: 48px 16px;
+      flex-direction: column;
+      align-items: center;
+      padding: 56px 16px 80px;
+      -webkit-font-smoothing: antialiased;
     }
 
-    .container { width: 100%; max-width: 720px; }
+    .wrapper {
+      width: 100%;
+      max-width: 680px;
+    }
 
-    h1 { font-size: 1.4rem; font-weight: 600; color: #fff; margin-bottom: 4px; }
-    .subtitle { color: var(--muted); font-size: 0.875rem; margin-bottom: 32px; }
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
 
-    .url-row { display: flex; gap: 8px; margin-bottom: 24px; }
+    .header-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #7c3aed, #a78bfa);
+      border-radius: 12px;
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .header-icon svg { width: 22px; height: 22px; fill: white; }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.9375rem;
+      line-height: 1.5;
+    }
+
+    /* Input card */
+    .input-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      transition: border-color 0.15s;
+    }
+
+    .input-card.valid  { border-color: #4ade8055; }
+    .input-card.error  { border-color: #f8717155; }
+
+    .input-row { display: flex; gap: 8px; }
 
     .url-input {
       flex: 1;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--accent);
+      background: transparent;
+      border: none;
+      color: var(--text);
       font-family: var(--mono);
       font-size: 0.875rem;
-      padding: 10px 14px;
-      border-radius: 6px;
       outline: none;
-      transition: border-color 0.15s;
+      min-width: 0;
     }
-    .url-input:focus { border-color: #555; }
-    .url-input::placeholder { color: var(--muted); }
-    .url-input.error { border-color: var(--red); }
-    .url-input.valid { border-color: var(--green); }
+    .url-input::placeholder { color: var(--dim); }
 
     .clear-btn {
-      background: var(--surface);
+      background: var(--surface-2);
       border: 1px solid var(--border);
       color: var(--muted);
-      padding: 10px 14px;
-      border-radius: 6px;
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
       cursor: pointer;
-      font-size: 0.875rem;
-      transition: color 0.15s, border-color 0.15s;
+      font-family: var(--font);
+      font-size: 0.8125rem;
+      transition: color 0.12s, border-color 0.12s;
+      white-space: nowrap;
     }
-    .clear-btn:hover { color: var(--accent); border-color: #555; }
+    .clear-btn:hover { color: var(--text); border-color: var(--border-hi); }
 
-    .video-info {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 12px 14px;
-      margin-bottom: 24px;
-      font-size: 0.8rem;
-      color: var(--muted);
+    .vid-badge {
       display: none;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      font-size: 0.75rem;
+      color: var(--muted);
     }
-    .video-info.visible { display: block; }
-    .video-info .vid-id { color: var(--blue); font-family: var(--mono); }
+    .vid-badge.show { display: flex; align-items: center; gap: 6px; }
+    .vid-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+    .vid-badge code { color: var(--accent); font-family: var(--mono); font-size: 0.75rem; }
 
+    /* Tabs */
     .tabs {
       display: flex;
-      gap: 4px;
+      gap: 2px;
       margin-bottom: 24px;
-      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 4px;
     }
+
     .tab-btn {
+      flex: 1;
       background: none;
       border: none;
       color: var(--muted);
       font-family: var(--font);
       font-size: 0.875rem;
-      padding: 8px 16px;
+      font-weight: 500;
+      padding: 8px 12px;
+      border-radius: calc(var(--radius) - 4px);
       cursor: pointer;
-      border-bottom: 2px solid transparent;
-      margin-bottom: -1px;
-      transition: color 0.15s;
+      transition: color 0.12s, background 0.12s;
     }
-    .tab-btn:hover { color: var(--accent); }
-    .tab-btn.active { color: #fff; border-bottom-color: #fff; }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      background: var(--surface-2);
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
 
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
 
-    .section-title {
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
       margin-bottom: 12px;
     }
 
-    .description { color: var(--muted); font-size: 0.875rem; line-height: 1.6; margin-bottom: 20px; }
+    .card-body { padding: 20px; }
 
-    .action-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .card-title {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
 
-    .action-btn {
-      background: #fff;
-      color: #000;
+    .card-desc {
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 18px;
+    }
+
+    .placeholder-msg {
+      text-align: center;
+      color: var(--dim);
+      font-size: 0.875rem;
+      padding: 40px 0;
+    }
+
+    /* Primary button */
+    .btn-primary {
+      background: var(--accent-btn);
+      color: #fff;
       border: none;
+      padding: 10px 22px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font);
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:disabled { opacity: 0.4; cursor: default; }
+
+    /* Ghost buttons */
+    .btn-ghost {
+      background: var(--surface-2);
+      color: var(--muted);
+      border: 1px solid var(--border);
       padding: 9px 18px;
-      border-radius: 6px;
+      border-radius: var(--radius-sm);
       font-family: var(--font);
       font-size: 0.875rem;
       font-weight: 500;
       cursor: pointer;
-      transition: opacity 0.15s;
+      transition: color 0.12s, border-color 0.12s;
     }
-    .action-btn:hover { opacity: 0.88; }
-    .action-btn:disabled { opacity: 0.35; cursor: default; }
-    .action-btn.secondary {
+    .btn-ghost:hover { color: var(--text); border-color: var(--border-hi); }
+
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* Transcript output */
+    .transcript-card {
       background: var(--surface);
-      color: var(--accent);
       border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-top: 16px;
     }
 
-    .code-block {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 16px;
-      margin-bottom: 16px;
-    }
-    .code-block-header {
+    .transcript-top {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 10px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
     }
-    .code-label { font-size: 0.75rem; color: var(--muted); font-family: var(--mono); }
+
+    .transcript-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .tag {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      background: var(--surface-2);
+    }
 
     .copy-btn {
       background: none;
       border: 1px solid var(--border);
       color: var(--muted);
       font-size: 0.75rem;
-      padding: 3px 10px;
-      border-radius: 4px;
+      padding: 4px 12px;
+      border-radius: 6px;
       cursor: pointer;
       font-family: var(--font);
-      transition: color 0.15s, border-color 0.15s;
+      white-space: nowrap;
+      transition: color 0.12s, border-color 0.12s;
+      flex-shrink: 0;
     }
-    .copy-btn:hover { color: var(--accent); border-color: #555; }
+    .copy-btn:hover { color: var(--text); border-color: var(--border-hi); }
     .copy-btn.copied { color: var(--green); border-color: var(--green); }
+
+    .transcript-body {
+      padding: 16px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-size: 0.875rem;
+      line-height: 1.75;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .transcript-body::-webkit-scrollbar { width: 5px; }
+    .transcript-body::-webkit-scrollbar-track { background: transparent; }
+    .transcript-body::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 3px; }
+
+    /* Error / notice */
+    .notice {
+      font-size: 0.8125rem;
+      line-height: 1.6;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      background: var(--surface);
+    }
+    .notice.err { border-color: #7f1d1d; background: #1c0606; color: var(--red); }
+    .notice.warn { border-color: #713f12; background: #1c1104; color: var(--yellow); }
+
+    /* Code block */
+    .code-block {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    .code-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .code-label {
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
 
     pre {
       font-family: var(--mono);
       font-size: 0.8rem;
-      color: var(--accent);
+      color: var(--text);
       white-space: pre-wrap;
       word-break: break-all;
       line-height: 1.6;
+      padding: 12px 14px;
     }
-
-    .notice {
-      font-size: 0.8rem;
-      color: var(--muted);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 10px 14px;
-      line-height: 1.5;
-    }
-    .notice.warn { border-color: #5a4a00; background: #1a1500; color: var(--yellow); }
-    .notice.err { border-color: #5a0000; background: #1a0000; color: var(--red); }
 
     hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
 
-    .placeholder-msg { color: var(--muted); font-size: 0.875rem; text-align: center; padding: 32px 0; }
-
-    /* Transcript output */
-    .transcript-block {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      overflow: hidden;
-      margin-top: 12px;
-    }
-    .transcript-header {
+    /* Quality selector */
+    .quality-row {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--border);
+      gap: 8px;
+      margin-bottom: 20px;
     }
-    .transcript-meta { font-size: 0.75rem; color: var(--muted); }
-    .transcript-body {
-      padding: 14px;
-      max-height: 320px;
-      overflow-y: auto;
-      font-size: 0.8rem;
-      line-height: 1.7;
-      color: var(--accent);
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-family: var(--font);
-    }
-    .transcript-body::-webkit-scrollbar { width: 6px; }
-    .transcript-body::-webkit-scrollbar-track { background: transparent; }
-    .transcript-body::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
 
-    /* Model selector */
-    .model-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
-    .model-btn {
-      background: var(--surface);
+    .quality-btn {
+      flex: 1;
+      background: var(--surface-2);
       border: 1px solid var(--border);
-      color: var(--muted);
-      padding: 5px 14px;
-      border-radius: 4px;
+      border-radius: var(--radius-sm);
+      padding: 12px 10px;
       cursor: pointer;
-      font-size: 0.8rem;
-      font-family: var(--mono);
-      transition: color 0.12s, border-color 0.12s;
+      text-align: center;
+      transition: border-color 0.12s, background 0.12s;
     }
-    .model-btn:hover { color: var(--accent); border-color: #555; }
-    .model-btn.active { color: #fff; border-color: #fff; }
+    .quality-btn:hover { border-color: var(--border-hi); }
+    .quality-btn.active {
+      border-color: var(--accent);
+      background: rgba(124, 58, 237, 0.1);
+    }
 
-    .external-links { display: flex; flex-direction: column; gap: 12px; }
+    .quality-btn .q-name {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text);
+      display: block;
+      margin-bottom: 3px;
+    }
+    .quality-btn .q-desc {
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+    .quality-btn.active .q-name { color: var(--accent); }
+
+    /* External link cards */
     .link-card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px 18px;
+      border-radius: var(--radius);
+      padding: 18px;
       text-decoration: none;
-      color: var(--accent);
-      transition: border-color 0.15s;
+      color: var(--text);
       display: block;
+      margin-bottom: 10px;
+      transition: border-color 0.12s, background 0.12s;
     }
-    .link-card:hover { border-color: #555; }
-    .link-card .link-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; }
-    .link-card .link-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
-    .link-card .link-url { font-family: var(--mono); font-size: 0.75rem; color: var(--blue); margin-top: 6px; }
+    .link-card:hover { border-color: var(--border-hi); background: var(--surface-2); }
+    .link-card .lc-title { font-weight: 600; font-size: 0.9375rem; margin-bottom: 4px; }
+    .link-card .lc-desc { font-size: 0.8125rem; color: var(--muted); line-height: 1.5; margin-bottom: 6px; }
+    .link-card .lc-url { font-size: 0.75rem; color: var(--accent); font-family: var(--mono); }
+
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--muted);
+      flex-shrink: 0;
+      margin-right: 8px;
+    }
+
+    .step-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
   </style>
 </head>
 <body>
-<div class="container">
-  <h1>YouTube Transcription</h1>
-  <p class="subtitle">Paste a YouTube URL and choose how to transcribe it.</p>
+<div class="wrapper">
 
-  <div class="url-row">
-    <input class="url-input" id="urlInput" type="text"
-      placeholder="https://www.youtube.com/watch?v=..."
-      autocomplete="off" spellcheck="false" />
-    <button class="clear-btn" id="clearBtn">Clear</button>
+  <!-- Header -->
+  <div class="header">
+    <div class="header-icon">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-6 9h6m-6 4h4"/>
+        <path fill="none" stroke="white" stroke-width="2" stroke-linecap="round" d="M9 12h6M9 16h4"/>
+        <rect x="7" y="3" width="10" height="4" rx="1" fill="white" opacity="0.3"/>
+      </svg>
+    </div>
+    <h1>YouTube to Text</h1>
+    <p class="subtitle">Paste any YouTube link and pull out everything that was said</p>
   </div>
 
-  <div class="video-info" id="videoInfo">
-    Video ID: <span class="vid-id" id="vidIdSpan"></span>
+  <!-- URL input -->
+  <div class="input-card" id="inputCard">
+    <div class="input-row">
+      <input class="url-input" id="urlInput" type="text"
+        placeholder="https://www.youtube.com/watch?v=..."
+        autocomplete="off" spellcheck="false" />
+      <button class="clear-btn" id="clearBtn">Clear</button>
+    </div>
+    <div class="vid-badge" id="vidBadge">
+      <span class="dot"></span>
+      <span>Video ready &mdash;</span>
+      <code id="vidIdSpan"></code>
+    </div>
   </div>
 
+  <!-- Tabs -->
   <div class="tabs">
-    <button class="tab-btn active" data-tab="yt">YouTube Transcript</button>
-    <button class="tab-btn" data-tab="whisper">yt-dlp + Whisper</button>
-    <button class="tab-btn" data-tab="web">Web Tools</button>
+    <button class="tab-btn active" data-tab="instant">Get Text</button>
+    <button class="tab-btn" data-tab="offline">Offline</button>
+    <button class="tab-btn" data-tab="tools">Other Tools</button>
   </div>
 
-  <!-- Tab: YouTube Transcript -->
-  <div class="tab-panel active" id="tab-yt">
-    <p class="section-title">Fetch transcript</p>
-    <p class="description">
-      Fetches the transcript directly — auto-generated or manual captions. Works on most public videos.
-    </p>
+  <!-- Tab: Get Text -->
+  <div class="tab-panel active" id="tab-instant">
+    <div class="card">
+      <div class="card-body">
+        <div class="card-title">Instant transcript</div>
+        <div class="card-desc">We fetch everything that was said in the video — no downloads, no sign-up. Works on most public videos.</div>
 
-    <div id="yt-placeholder">
-      <p class="placeholder-msg">Paste a YouTube URL above.</p>
-    </div>
+        <div id="instant-placeholder">
+          <p class="placeholder-msg">Paste a YouTube link above to get started</p>
+        </div>
 
-    <div id="yt-content" style="display:none">
-      <div class="action-row">
-        <button class="action-btn" id="fetchBtn">Fetch Transcript</button>
-        <button class="action-btn secondary" id="openTranscriptBtn">Open on YouTube</button>
-        <button class="action-btn secondary" id="copyTranscriptUrlBtn">Copy URL</button>
-      </div>
-
-      <div id="fetchError" style="display:none" class="notice err"></div>
-
-      <div id="transcriptOutput" style="display:none">
-        <div class="transcript-block">
-          <div class="transcript-header">
-            <span class="transcript-meta" id="transcriptMeta"></span>
-            <button class="copy-btn" id="copyTranscriptBtn">Copy</button>
+        <div id="instant-content" style="display:none">
+          <div class="btn-row">
+            <button class="btn-primary" id="fetchBtn">Get transcript</button>
+            <button class="btn-ghost" id="openTranscriptBtn">Watch video</button>
           </div>
-          <div class="transcript-body" id="transcriptBody"></div>
-        </div>
-      </div>
 
-      <hr />
-      <p class="section-title">Direct link</p>
-      <div class="code-block">
-        <div class="code-block-header">
-          <span class="code-label">YouTube transcript URL</span>
-          <button class="copy-btn" data-target="transcriptUrl">Copy</button>
+          <div id="fetchError" style="display:none; margin-top:14px" class="notice err"></div>
+
+          <div id="transcriptOutput" style="display:none">
+            <div class="transcript-card">
+              <div class="transcript-top">
+                <div class="transcript-tags" id="transcriptTags"></div>
+                <button class="copy-btn" id="copyTranscriptBtn">Copy all</button>
+              </div>
+              <div class="transcript-body" id="transcriptBody"></div>
+            </div>
+          </div>
         </div>
-        <pre id="transcriptUrl"></pre>
       </div>
-      <div class="notice">
-        If the transcript panel does not open automatically, click the three-dot menu below the video
-        and select "Show transcript". Availability depends on the video.
+    </div>
+
+    <div id="direct-link-block" style="display:none">
+      <div class="card">
+        <div class="card-body">
+          <div class="card-title">Open on YouTube</div>
+          <div class="card-desc">Opens the video with the subtitles panel turned on. You can copy the text from there too.</div>
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-label">Link</span>
+              <button class="copy-btn" data-target="transcriptUrl">Copy</button>
+            </div>
+            <pre id="transcriptUrl"></pre>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Tab: yt-dlp + Whisper -->
-  <div class="tab-panel" id="tab-whisper">
-    <p class="section-title">Local transcription — best accuracy</p>
-    <p class="description">
-      Download audio with yt-dlp, then transcribe locally with OpenAI Whisper.
-      Works offline after setup, handles any language, no usage limits.
-    </p>
+  <!-- Tab: Offline -->
+  <div class="tab-panel" id="tab-offline">
+    <div class="card">
+      <div class="card-body">
+        <div class="card-title">Download and transcribe</div>
+        <div class="card-desc">Downloads the audio from the video and runs AI on your own computer to read it. Slower to set up, but the most accurate method and works on any video.</div>
 
-    <div class="notice warn" style="margin-bottom:20px">
-      One-time setup required: install yt-dlp and Whisper before running these commands.
-    </div>
-
-    <p class="section-title" style="margin-top:16px">Setup (run once)</p>
-    <div class="code-block">
-      <div class="code-block-header">
-        <span class="code-label">Install dependencies</span>
-        <button class="copy-btn" data-target="setupCmd">Copy</button>
-      </div>
-      <pre id="setupCmd">pip install yt-dlp openai-whisper</pre>
-    </div>
-
-    <hr />
-    <p class="section-title">Model</p>
-    <div class="model-row" id="modelRow">
-      <button class="model-btn" data-model="tiny">tiny</button>
-      <button class="model-btn" data-model="base">base</button>
-      <button class="model-btn" data-model="small">small</button>
-      <button class="model-btn" data-model="medium">medium</button>
-      <button class="model-btn active" data-model="large">large</button>
-    </div>
-
-    <div id="whisper-placeholder">
-      <p class="placeholder-msg">Paste a YouTube URL above to generate the commands.</p>
-    </div>
-
-    <div id="whisper-content" style="display:none">
-      <p class="section-title">Transcribe</p>
-      <div class="code-block">
-        <div class="code-block-header">
-          <span class="code-label">Step 1 — Download audio</span>
-          <button class="copy-btn" data-target="ytdlpCmd">Copy</button>
+        <div class="notice warn" style="margin-bottom: 20px">
+          One-time setup needed before you can use this
         </div>
-        <pre id="ytdlpCmd"></pre>
-      </div>
-      <div class="code-block">
-        <div class="code-block-header">
-          <span class="code-label">Step 2 — Transcribe</span>
-          <button class="copy-btn" data-target="whisperCmd">Copy</button>
-        </div>
-        <pre id="whisperCmd"></pre>
-      </div>
-      <div class="code-block">
-        <div class="code-block-header">
-          <span class="code-label">One-liner</span>
-          <button class="copy-btn" data-target="oneliner">Copy</button>
-        </div>
-        <pre id="oneliner"></pre>
-      </div>
-    </div>
 
-    <hr />
-    <p class="section-title">Model comparison</p>
-    <div class="notice">
-      <strong>tiny / base</strong> — fast, lower accuracy, good for drafts<br />
-      <strong>small / medium</strong> — balanced speed and quality<br />
-      <strong>large</strong> — best accuracy, slowest, recommended for final output
+        <div class="step-title"><span class="step-num">1</span>Install the tools (run once)</div>
+        <div class="code-block" style="margin-bottom: 20px">
+          <div class="code-header">
+            <span class="code-label">Terminal</span>
+            <button class="copy-btn" data-target="setupCmd">Copy</button>
+          </div>
+          <pre id="setupCmd">pip install yt-dlp openai-whisper</pre>
+        </div>
+
+        <div class="step-title"><span class="step-num">2</span>How accurate do you want it?</div>
+        <div class="quality-row" id="qualityRow">
+          <button class="quality-btn" data-model="base">
+            <span class="q-name">Fast</span>
+            <span class="q-desc">Quick, good enough for drafts</span>
+          </button>
+          <button class="quality-btn" data-model="medium">
+            <span class="q-name">Balanced</span>
+            <span class="q-desc">Good accuracy, reasonable speed</span>
+          </button>
+          <button class="quality-btn active" data-model="large">
+            <span class="q-name">Best</span>
+            <span class="q-desc">Most accurate, takes longer</span>
+          </button>
+        </div>
+
+        <div id="offline-placeholder">
+          <p class="placeholder-msg">Paste a YouTube link above to generate the commands</p>
+        </div>
+
+        <div id="offline-content" style="display:none">
+          <div class="step-title"><span class="step-num">3</span>Run these commands</div>
+
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-label">Download audio</span>
+              <button class="copy-btn" data-target="ytdlpCmd">Copy</button>
+            </div>
+            <pre id="ytdlpCmd"></pre>
+          </div>
+
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-label">Transcribe</span>
+              <button class="copy-btn" data-target="whisperCmd">Copy</button>
+            </div>
+            <pre id="whisperCmd"></pre>
+          </div>
+
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-label">Do both at once</span>
+              <button class="copy-btn" data-target="oneliner">Copy</button>
+            </div>
+            <pre id="oneliner"></pre>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Tab: Web Tools -->
-  <div class="tab-panel" id="tab-web">
-    <p class="section-title">No-install options</p>
-    <p class="description">
-      These tools pull existing YouTube captions and let you export or summarize them.
-      Accuracy depends on YouTube's own auto-generated text.
-    </p>
-
-    <div class="external-links">
-      <a class="link-card" href="https://tactiq.io" target="_blank" rel="noopener">
-        <div class="link-title">Tactiq</div>
-        <div class="link-desc">Browser extension — shows and exports the transcript while you watch. Works in YouTube, Google Meet, Zoom.</div>
-        <div class="link-url">tactiq.io</div>
-      </a>
-      <a class="link-card" href="https://summarize.tech" target="_blank" rel="noopener">
-        <div class="link-title">Summarize.tech</div>
-        <div class="link-desc">Paste a YouTube URL and get an AI-generated summary from the captions. No install — web-only.</div>
-        <div class="link-url">summarize.tech</div>
-      </a>
-    </div>
-
-    <div id="web-url-content" style="display:none; margin-top:20px">
-      <hr />
-      <p class="section-title" style="margin-top:4px">Quick open</p>
-      <div class="action-row">
-        <button class="action-btn secondary" id="openSummarizeBtn">Open in Summarize.tech</button>
+  <!-- Tab: Other Tools -->
+  <div class="tab-panel" id="tab-tools">
+    <div class="card">
+      <div class="card-body">
+        <div class="card-title">Browser tools</div>
+        <div class="card-desc">These work straight in your browser — no command line, no downloads. They read YouTube's own subtitles.</div>
       </div>
     </div>
+
+    <a class="link-card" href="https://tactiq.io" target="_blank" rel="noopener">
+      <div class="lc-title">Tactiq</div>
+      <div class="lc-desc">A browser extension that shows and saves the transcript as you watch. Also works in Google Meet and Zoom.</div>
+      <div class="lc-url">tactiq.io</div>
+    </a>
+
+    <a class="link-card" href="https://summarize.tech" target="_blank" rel="noopener">
+      <div class="lc-title">Summarize.tech</div>
+      <div class="lc-desc">Paste a YouTube link and get a summary of what was said. No sign-up needed.</div>
+      <div class="lc-url">summarize.tech</div>
+    </a>
+
+    <div id="tools-open-btn" style="display:none; margin-top:4px">
+      <button class="btn-ghost" id="openSummarizeBtn" style="width:100%">Open this video in Summarize.tech</button>
+    </div>
   </div>
+
 </div>
 
 <script>
-  const urlInput = document.getElementById('urlInput');
-  const clearBtn = document.getElementById('clearBtn');
-  const videoInfo = document.getElementById('videoInfo');
-  const vidIdSpan = document.getElementById('vidIdSpan');
+  const urlInput   = document.getElementById('urlInput');
+  const clearBtn   = document.getElementById('clearBtn');
+  const inputCard  = document.getElementById('inputCard');
+  const vidBadge   = document.getElementById('vidBadge');
+  const vidIdSpan  = document.getElementById('vidIdSpan');
 
-  let currentVid = null;
+  let currentVid   = null;
   let selectedModel = 'large';
 
   function extractVideoId(url) {
@@ -462,46 +649,46 @@
     const raw = urlInput.value.trim();
     const vid = raw ? extractVideoId(raw) : null;
 
-    urlInput.classList.toggle('valid', !!vid);
-    urlInput.classList.toggle('error', !!raw && !vid);
-    videoInfo.classList.toggle('visible', !!vid);
+    inputCard.classList.toggle('valid', !!vid);
+    inputCard.classList.toggle('error', !!raw && !vid);
+    vidBadge.classList.toggle('show', !!vid);
     if (vid) vidIdSpan.textContent = vid;
 
     currentVid = vid;
 
     // Tab 1
-    document.getElementById('yt-placeholder').style.display = vid ? 'none' : 'block';
-    document.getElementById('yt-content').style.display = vid ? 'block' : 'none';
+    document.getElementById('instant-placeholder').style.display = vid ? 'none' : 'block';
+    document.getElementById('instant-content').style.display = vid ? 'block' : 'none';
+    document.getElementById('direct-link-block').style.display = vid ? 'block' : 'none';
+
     if (vid) {
       const tUrl = `https://www.youtube.com/watch?v=${vid}&cc_load_policy=1`;
       document.getElementById('transcriptUrl').textContent = tUrl;
       document.getElementById('openTranscriptBtn').onclick = () => window.open(tUrl, '_blank');
-      document.getElementById('copyTranscriptUrlBtn').onclick = () =>
-        copyText(tUrl, document.getElementById('copyTranscriptUrlBtn'));
     }
 
     // Tab 2
-    document.getElementById('whisper-placeholder').style.display = vid ? 'none' : 'block';
-    document.getElementById('whisper-content').style.display = vid ? 'block' : 'none';
+    document.getElementById('offline-placeholder').style.display = vid ? 'none' : 'block';
+    document.getElementById('offline-content').style.display = vid ? 'block' : 'none';
     if (vid) updateCommands(vid);
 
     // Tab 3
-    document.getElementById('web-url-content').style.display = vid ? 'block' : 'none';
+    document.getElementById('tools-open-btn').style.display = vid ? 'block' : 'none';
     if (vid) {
       document.getElementById('openSummarizeBtn').onclick = () =>
         window.open(`https://summarize.tech/https://www.youtube.com/watch?v=${vid}`, '_blank');
     }
 
-    // Reset transcript output when URL changes
+    // Reset transcript on URL change
     document.getElementById('transcriptOutput').style.display = 'none';
     document.getElementById('fetchError').style.display = 'none';
   }
 
-  // Model selector
-  document.getElementById('modelRow').addEventListener('click', e => {
-    const btn = e.target.closest('.model-btn');
+  // Quality selector
+  document.getElementById('qualityRow').addEventListener('click', e => {
+    const btn = e.target.closest('.quality-btn');
     if (!btn) return;
-    document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.quality-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     selectedModel = btn.dataset.model;
     if (currentVid) updateCommands(currentVid);
@@ -522,20 +709,33 @@
     try {
       const res = await fetch(`/api/transcript?v=${encodeURIComponent(currentVid)}`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Failed to fetch transcript.');
+      if (!res.ok) throw new Error(data.detail || 'Could not fetch transcript.');
 
       document.getElementById('transcriptBody').textContent = data.text;
-      document.getElementById('transcriptMeta').textContent =
-        `${data.language_name} (${data.language}) · ${data.is_generated ? 'Auto-generated' : 'Manual'} · ${data.word_count.toLocaleString()} words`;
+
+      const tags = document.getElementById('transcriptTags');
+      tags.innerHTML = '';
+      [
+        data.language_name,
+        data.is_generated ? 'Auto-generated' : 'Manual',
+        `${data.word_count.toLocaleString()} words`
+      ].forEach(t => {
+        const el = document.createElement('span');
+        el.className = 'tag';
+        el.textContent = t;
+        tags.appendChild(el);
+      });
+
       document.getElementById('copyTranscriptBtn').onclick = () =>
         copyText(data.text, document.getElementById('copyTranscriptBtn'));
+
       outputEl.style.display = 'block';
     } catch (err) {
       errorEl.textContent = err.message;
       errorEl.style.display = 'block';
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Fetch Transcript';
+      btn.textContent = 'Get transcript';
     }
   });
 
@@ -549,7 +749,7 @@
     });
   });
 
-  // Generic copy buttons
+  // Copy buttons
   document.querySelectorAll('.copy-btn[data-target]').forEach(btn => {
     btn.addEventListener('click', () => {
       const text = document.getElementById(btn.dataset.target)?.textContent || '';
@@ -560,15 +760,15 @@
   function copyText(text, btn) {
     navigator.clipboard.writeText(text).then(() => {
       const orig = btn.textContent;
-      btn.textContent = 'Copied';
+      btn.textContent = 'Copied!';
       btn.classList.add('copied');
-      setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
+      setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1600);
     });
   }
 
   clearBtn.addEventListener('click', () => {
     urlInput.value = '';
-    urlInput.classList.remove('valid', 'error');
+    inputCard.classList.remove('valid', 'error');
     update();
     urlInput.focus();
   });
