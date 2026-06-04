@@ -1,11 +1,44 @@
+import os
+import tempfile
+import http.cookiejar
 from pathlib import Path
+
+import requests
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from youtube_transcript_api import YouTubeTranscriptApi
 
 BASE_DIR = Path(__file__).parent
 app = FastAPI()
-_api = YouTubeTranscriptApi()
+
+
+def _make_session() -> requests.Session:
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/125.0.0.0 Safari/537.36"
+        ),
+        "Accept-Language": "en-US,en;q=0.9",
+    })
+    cookies_content = os.environ.get("YOUTUBE_COOKIES", "").strip()
+    if cookies_content:
+        jar = http.cookiejar.MozillaCookieJar()
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write(cookies_content)
+            tmp = f.name
+        try:
+            jar.load(tmp, ignore_discard=True, ignore_expires=True)
+            session.cookies = requests.utils.cookiejar_from_dict(
+                {c.name: c.value for c in jar}
+            )
+        finally:
+            os.unlink(tmp)
+    return session
+
+
+_api = YouTubeTranscriptApi(http_client=_make_session())
 
 
 @app.get("/")
