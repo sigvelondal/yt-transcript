@@ -293,6 +293,46 @@
     .transcript-body::-webkit-scrollbar-track { background: transparent; }
     .transcript-body::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 3px; }
 
+    /* View toggle (Text / Timestamps) */
+    .view-toggle {
+      display: flex;
+      gap: 2px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px;
+      flex-shrink: 0;
+    }
+    .view-toggle button {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-family: var(--font);
+      font-size: 0.72rem;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color 0.12s, background 0.12s;
+    }
+    .view-toggle button.active { background: var(--surface); color: var(--text); }
+    .transcript-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+
+    /* Timestamped segments */
+    .seg { display: flex; gap: 14px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .seg:last-child { border-bottom: none; }
+    .seg-ts {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--accent);
+      flex: none;
+      padding-top: 2px;
+      text-decoration: none;
+      min-width: 42px;
+    }
+    a.seg-ts:hover { text-decoration: underline; }
+
     /* Error / notice */
     .notice {
       font-size: 0.8125rem;
@@ -422,6 +462,64 @@
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
+
+    /* Multi-video additions */
+    textarea.url-input {
+      display: block;
+      width: 100%;
+      resize: vertical;
+      min-height: 24px;
+      max-height: 180px;
+      line-height: 1.6;
+      overflow-y: auto;
+    }
+
+    .input-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .input-meta .clear-btn { margin-left: auto; }
+
+    .vid-badge { margin-top: 0; padding-top: 0; border-top: none; }
+
+    .progress-msg {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8125rem;
+      color: var(--muted);
+      margin: 14px 0;
+    }
+    .progress-msg .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent); flex-shrink: 0;
+    }
+
+    #transcriptResults .transcript-card { margin-top: 16px; }
+
+    .vid-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-2);
+    }
+    .vid-head .vh-idx {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--dim);
+    }
+    .vid-head a.vh-id {
+      font-family: var(--mono);
+      font-size: 0.8125rem;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .vid-head a.vh-id:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -442,16 +540,15 @@
 
   <!-- URL input -->
   <div class="input-card" id="inputCard">
-    <div class="input-row">
-      <input class="url-input" id="urlInput" type="text"
-        placeholder="https://www.youtube.com/watch?v=..."
-        autocomplete="off" spellcheck="false" />
+    <textarea class="url-input" id="urlInput" rows="1"
+      placeholder="Paste one or more YouTube links (one per line)"
+      autocomplete="off" spellcheck="false"></textarea>
+    <div class="input-meta">
+      <div class="vid-badge" id="vidBadge">
+        <span class="dot"></span>
+        <span id="vidBadgeText"></span>
+      </div>
       <button class="clear-btn" id="clearBtn">Clear</button>
-    </div>
-    <div class="vid-badge" id="vidBadge">
-      <span class="dot"></span>
-      <span>Video ready &mdash;</span>
-      <code id="vidIdSpan"></code>
     </div>
   </div>
 
@@ -467,7 +564,7 @@
     <div class="card">
       <div class="card-body">
         <div class="card-title">Instant transcript</div>
-        <div class="card-desc">We fetch everything that was said in the video — no downloads, no sign-up. Works on most public videos.</div>
+        <div class="card-desc">We fetch everything that was said in the video. No downloads, no sign-up. Works on most public videos.</div>
 
         <div id="instant-placeholder">
           <p class="placeholder-msg">Paste a YouTube link above to get started</p>
@@ -479,17 +576,11 @@
             <button class="btn-ghost" id="openTranscriptBtn">Watch video</button>
           </div>
 
-          <div id="fetchError" style="display:none; margin-top:14px" class="notice err"></div>
-
-          <div id="transcriptOutput" style="display:none">
-            <div class="transcript-card">
-              <div class="transcript-top">
-                <div class="transcript-tags" id="transcriptTags"></div>
-                <button class="copy-btn" id="copyTranscriptBtn">Copy all</button>
-              </div>
-              <div class="transcript-body" id="transcriptBody"></div>
-            </div>
+          <div id="fetchProgress" class="progress-msg" style="display:none">
+            <span class="dot"></span><span id="fetchProgressText"></span>
           </div>
+
+          <div id="transcriptResults"></div>
         </div>
       </div>
     </div>
@@ -587,7 +678,7 @@
     <div class="card">
       <div class="card-body">
         <div class="card-title">Browser tools</div>
-        <div class="card-desc">These work straight in your browser — no command line, no downloads. They read YouTube's own subtitles.</div>
+        <div class="card-desc">These work straight in your browser (no command line, no downloads). They read YouTube's own subtitles.</div>
       </div>
     </div>
 
@@ -611,18 +702,24 @@
 </div>
 
 <script>
-  const urlInput   = document.getElementById('urlInput');
-  const clearBtn   = document.getElementById('clearBtn');
-  const inputCard  = document.getElementById('inputCard');
-  const vidBadge   = document.getElementById('vidBadge');
-  const vidIdSpan  = document.getElementById('vidIdSpan');
+  const urlInput     = document.getElementById('urlInput');
+  const clearBtn     = document.getElementById('clearBtn');
+  const inputCard    = document.getElementById('inputCard');
+  const vidBadge     = document.getElementById('vidBadge');
+  const vidBadgeText = document.getElementById('vidBadgeText');
 
-  let currentVid   = null;
+  let currentVids   = [];
   let selectedModel = 'large';
 
-  function extractVideoId(url) {
+  function fmtTs(sec) {
+    const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+    return `${m}:${String(s).padStart(2, '0')}`;
+  }
+  function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+  function extractVideoId(token) {
     try {
-      const u = new URL(url);
+      const u = new URL(token);
       if (u.hostname === 'youtu.be') return u.pathname.slice(1).split('?')[0];
       if (u.hostname.includes('youtube.com')) {
         const v = u.searchParams.get('v');
@@ -631,57 +728,201 @@
         if (m) return m[1];
       }
     } catch {}
+    if (/^[\w-]{11}$/.test(token)) return token;
     return null;
   }
 
-  function updateCommands(vid) {
-    if (!vid) return;
-    const videoUrl = `https://www.youtube.com/watch?v=${vid}`;
-    document.getElementById('ytdlpCmd').textContent =
-      `yt-dlp -x --audio-format mp3 "${videoUrl}" -o audio.mp3`;
-    document.getElementById('whisperCmd').textContent =
-      `whisper audio.mp3 --model ${selectedModel}`;
-    document.getElementById('oneliner').textContent =
-      `yt-dlp -x --audio-format mp3 "${videoUrl}" -o audio.mp3 && whisper audio.mp3 --model ${selectedModel}`;
+  function extractVideoIds(text) {
+    const ids = [];
+    const seen = new Set();
+    for (const tok of text.split(/[\s,]+/)) {
+      const t = tok.trim();
+      if (!t) continue;
+      const id = extractVideoId(t);
+      if (id && !seen.has(id)) { seen.add(id); ids.push(id); }
+    }
+    return ids;
+  }
+
+  function updateCommands(vids) {
+    if (!vids.length) return;
+    const urls = vids.map(v => `https://www.youtube.com/watch?v=${v}`);
+    const ytdlp = document.getElementById('ytdlpCmd');
+    const whisper = document.getElementById('whisperCmd');
+    const oneliner = document.getElementById('oneliner');
+    if (vids.length === 1) {
+      const url = urls[0];
+      ytdlp.textContent = `yt-dlp -x --audio-format mp3 "${url}" -o audio.mp3`;
+      whisper.textContent = `whisper audio.mp3 --model ${selectedModel}`;
+      oneliner.textContent = `yt-dlp -x --audio-format mp3 "${url}" -o audio.mp3 && whisper audio.mp3 --model ${selectedModel}`;
+    } else {
+      const quoted = urls.map(u => `"${u}"`).join(' ');
+      const ids = vids.join(' ');
+      ytdlp.textContent = `yt-dlp -x --audio-format mp3 -o "%(id)s.%(ext)s" ${quoted}`;
+      whisper.textContent = `for id in ${ids}; do whisper "$id.mp3" --model ${selectedModel}; done`;
+      oneliner.textContent = `yt-dlp -x --audio-format mp3 -o "%(id)s.%(ext)s" ${quoted} && for id in ${ids}; do whisper "$id.mp3" --model ${selectedModel}; done`;
+    }
+  }
+
+  function copyText(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1600);
+    });
+  }
+
+  function renderResult(container, vid, idx, total, data, errMsg) {
+    const card = document.createElement('div');
+    card.className = 'transcript-card';
+
+    const head = document.createElement('div');
+    head.className = 'vid-head';
+    if (total > 1) {
+      const ix = document.createElement('span');
+      ix.className = 'vh-idx';
+      ix.textContent = `${idx + 1}/${total}`;
+      head.appendChild(ix);
+    }
+    const link = document.createElement('a');
+    link.className = 'vh-id';
+    link.href = `https://www.youtube.com/watch?v=${vid}`;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.textContent = vid;
+    head.appendChild(link);
+    card.appendChild(head);
+
+    if (errMsg) {
+      const note = document.createElement('div');
+      note.className = 'notice err';
+      note.style.margin = '12px 16px';
+      note.textContent = errMsg;
+      card.appendChild(note);
+      container.appendChild(card);
+      return;
+    }
+
+    const top = document.createElement('div');
+    top.className = 'transcript-top';
+
+    const tags = document.createElement('div');
+    tags.className = 'transcript-tags';
+    [
+      data.language_name,
+      data.is_generated ? 'Auto-generated' : 'Manual',
+      `${data.word_count.toLocaleString()} words`
+    ].forEach(t => {
+      const el = document.createElement('span');
+      el.className = 'tag';
+      el.textContent = t;
+      tags.appendChild(el);
+    });
+    top.appendChild(tags);
+
+    const actions = document.createElement('div');
+    actions.className = 'transcript-actions';
+
+    const toggle = document.createElement('div');
+    toggle.className = 'view-toggle';
+    const bText = document.createElement('button');
+    bText.dataset.view = 'text'; bText.className = 'active'; bText.textContent = 'Text';
+    const bSeg = document.createElement('button');
+    bSeg.dataset.view = 'seg'; bSeg.textContent = 'Timestamps';
+    toggle.appendChild(bText); toggle.appendChild(bSeg);
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.textContent = 'Copy all';
+
+    actions.appendChild(toggle);
+    actions.appendChild(copyBtn);
+    top.appendChild(actions);
+    card.appendChild(top);
+
+    const body = document.createElement('div');
+    body.className = 'transcript-body';
+    card.appendChild(body);
+
+    let view = 'text';
+    function draw() {
+      if (view === 'text') {
+        body.textContent = data.text;
+      } else {
+        const segs = data.segments || [];
+        body.innerHTML = segs.map(s => {
+          const url = `https://www.youtube.com/watch?v=${vid}&t=${Math.floor(s.start)}s`;
+          return `<div class="seg"><a class="seg-ts" href="${url}" target="_blank" rel="noopener">${fmtTs(s.start)}</a><span>${escHtml(s.text)}</span></div>`;
+        }).join('') || '<div class="placeholder-msg">No timestamps available</div>';
+      }
+    }
+    draw();
+
+    toggle.addEventListener('click', e => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      view = b.dataset.view;
+      toggle.querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+      draw();
+    });
+    copyBtn.addEventListener('click', () => copyText(data.text, copyBtn));
+
+    container.appendChild(card);
   }
 
   function update() {
     const raw = urlInput.value.trim();
-    const vid = raw ? extractVideoId(raw) : null;
+    const vids = raw ? extractVideoIds(raw) : [];
+    currentVids = vids;
+    const n = vids.length;
+    const single = n === 1;
 
-    inputCard.classList.toggle('valid', !!vid);
-    inputCard.classList.toggle('error', !!raw && !vid);
-    vidBadge.classList.toggle('show', !!vid);
-    if (vid) vidIdSpan.textContent = vid;
+    inputCard.classList.toggle('valid', n > 0);
+    inputCard.classList.toggle('error', !!raw && n === 0);
+    vidBadge.classList.toggle('show', n > 0);
+    if (single) vidBadgeText.textContent = `Video ready: ${vids[0]}`;
+    else if (n > 1) vidBadgeText.textContent = `${n} videos ready`;
 
-    currentVid = vid;
+    // Tab 1: Get Text
+    document.getElementById('instant-placeholder').style.display = n ? 'none' : 'block';
+    document.getElementById('instant-content').style.display = n ? 'block' : 'none';
+    document.getElementById('fetchBtn').textContent = n > 1 ? 'Get transcripts' : 'Get transcript';
 
-    // Tab 1
-    document.getElementById('instant-placeholder').style.display = vid ? 'none' : 'block';
-    document.getElementById('instant-content').style.display = vid ? 'block' : 'none';
-    document.getElementById('direct-link-block').style.display = vid ? 'block' : 'none';
-
-    if (vid) {
-      const tUrl = `https://www.youtube.com/watch?v=${vid}&cc_load_policy=1`;
-      document.getElementById('transcriptUrl').textContent = tUrl;
-      document.getElementById('openTranscriptBtn').onclick = () => window.open(tUrl, '_blank');
+    const watchBtn = document.getElementById('openTranscriptBtn');
+    watchBtn.style.display = n ? 'inline-block' : 'none';
+    watchBtn.textContent = single ? 'Watch video' : 'Watch first';
+    if (n) {
+      const watchUrl = `https://www.youtube.com/watch?v=${vids[0]}`;
+      watchBtn.onclick = () => window.open(watchUrl, '_blank');
     }
 
-    // Tab 2
-    document.getElementById('offline-placeholder').style.display = vid ? 'none' : 'block';
-    document.getElementById('offline-content').style.display = vid ? 'block' : 'none';
-    if (vid) updateCommands(vid);
-
-    // Tab 3
-    document.getElementById('tools-open-btn').style.display = vid ? 'block' : 'none';
-    if (vid) {
-      document.getElementById('openSummarizeBtn').onclick = () =>
-        window.open(`https://summarize.tech/https://www.youtube.com/watch?v=${vid}`, '_blank');
+    // "Open on YouTube" link block only makes sense for a single video
+    const dlb = document.getElementById('direct-link-block');
+    dlb.style.display = single ? 'block' : 'none';
+    if (single) {
+      document.getElementById('transcriptUrl').textContent =
+        `https://www.youtube.com/watch?v=${vids[0]}&cc_load_policy=1`;
     }
 
-    // Reset transcript on URL change
-    document.getElementById('transcriptOutput').style.display = 'none';
-    document.getElementById('fetchError').style.display = 'none';
+    // Tab 2: Offline
+    document.getElementById('offline-placeholder').style.display = n ? 'none' : 'block';
+    document.getElementById('offline-content').style.display = n ? 'block' : 'none';
+    if (n) updateCommands(vids);
+
+    // Tab 3: Other Tools
+    const toolsBtn = document.getElementById('tools-open-btn');
+    toolsBtn.style.display = n ? 'block' : 'none';
+    if (n) {
+      const sumBtn = document.getElementById('openSummarizeBtn');
+      sumBtn.textContent = single ? 'Open this video in Summarize.tech' : 'Open first video in Summarize.tech';
+      sumBtn.onclick = () =>
+        window.open(`https://summarize.tech/https://www.youtube.com/watch?v=${vids[0]}`, '_blank');
+    }
+
+    // Reset output on input change
+    document.getElementById('transcriptResults').innerHTML = '';
+    document.getElementById('fetchProgress').style.display = 'none';
   }
 
   // Quality selector
@@ -691,52 +932,41 @@
     document.querySelectorAll('.quality-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     selectedModel = btn.dataset.model;
-    if (currentVid) updateCommands(currentVid);
+    if (currentVids.length) updateCommands(currentVids);
   });
 
-  // Fetch transcript
+  // Fetch all transcripts
   document.getElementById('fetchBtn').addEventListener('click', async () => {
-    if (!currentVid) return;
+    if (!currentVids.length) return;
     const btn = document.getElementById('fetchBtn');
-    const errorEl = document.getElementById('fetchError');
-    const outputEl = document.getElementById('transcriptOutput');
+    const results = document.getElementById('transcriptResults');
+    const prog = document.getElementById('fetchProgress');
+    const progText = document.getElementById('fetchProgressText');
+
+    const vids = currentVids.slice();
+    const total = vids.length;
 
     btn.disabled = true;
-    btn.textContent = 'Fetching...';
-    errorEl.style.display = 'none';
-    outputEl.style.display = 'none';
+    results.innerHTML = '';
+    prog.style.display = total > 1 ? 'flex' : 'none';
 
-    try {
-      const res = await fetch(`/api/transcript?v=${encodeURIComponent(currentVid)}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Could not fetch transcript.');
-
-      document.getElementById('transcriptBody').textContent = data.text;
-
-      const tags = document.getElementById('transcriptTags');
-      tags.innerHTML = '';
-      [
-        data.language_name,
-        data.is_generated ? 'Auto-generated' : 'Manual',
-        `${data.word_count.toLocaleString()} words`
-      ].forEach(t => {
-        const el = document.createElement('span');
-        el.className = 'tag';
-        el.textContent = t;
-        tags.appendChild(el);
-      });
-
-      document.getElementById('copyTranscriptBtn').onclick = () =>
-        copyText(data.text, document.getElementById('copyTranscriptBtn'));
-
-      outputEl.style.display = 'block';
-    } catch (err) {
-      errorEl.textContent = err.message;
-      errorEl.style.display = 'block';
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Get transcript';
+    for (let i = 0; i < total; i++) {
+      const vid = vids[i];
+      btn.textContent = total > 1 ? `Fetching ${i + 1}/${total}...` : 'Fetching...';
+      if (total > 1) progText.textContent = `Fetching ${i + 1} of ${total}...`;
+      try {
+        const res = await fetch(`/api/transcript?v=${encodeURIComponent(vid)}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Could not fetch transcript.');
+        renderResult(results, vid, i, total, data, null);
+      } catch (err) {
+        renderResult(results, vid, i, total, null, err.message);
+      }
     }
+
+    prog.style.display = 'none';
+    btn.disabled = false;
+    btn.textContent = total > 1 ? 'Get transcripts' : 'Get transcript';
   });
 
   // Tabs
@@ -749,7 +979,7 @@
     });
   });
 
-  // Copy buttons
+  // Copy buttons (offline commands etc.)
   document.querySelectorAll('.copy-btn[data-target]').forEach(btn => {
     btn.addEventListener('click', () => {
       const text = document.getElementById(btn.dataset.target)?.textContent || '';
@@ -757,25 +987,25 @@
     });
   });
 
-  function copyText(text, btn) {
-    navigator.clipboard.writeText(text).then(() => {
-      const orig = btn.textContent;
-      btn.textContent = 'Copied!';
-      btn.classList.add('copied');
-      setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1600);
-    });
-  }
-
+  // Clear
   clearBtn.addEventListener('click', () => {
     urlInput.value = '';
     inputCard.classList.remove('valid', 'error');
+    autoGrow();
     update();
     urlInput.focus();
   });
 
-  urlInput.addEventListener('input', update);
-  urlInput.addEventListener('paste', () => setTimeout(update, 0));
+  // Auto-grow textarea
+  function autoGrow() {
+    urlInput.style.height = 'auto';
+    urlInput.style.height = Math.min(urlInput.scrollHeight, 180) + 'px';
+  }
 
+  urlInput.addEventListener('input', () => { autoGrow(); update(); });
+  urlInput.addEventListener('paste', () => setTimeout(() => { autoGrow(); update(); }, 0));
+
+  autoGrow();
   update();
 </script>
 </body>
