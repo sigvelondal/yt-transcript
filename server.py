@@ -60,12 +60,17 @@ async def get_transcript(
             result = t.fetch()
 
         text = " ".join(s.text.replace("\n", " ") for s in result.snippets)
+        segments = [
+            {"start": float(s.start), "text": s.text.replace("\n", " ").strip()}
+            for s in result.snippets
+        ]
         return {
             "video_id": v,
             "language": result.language_code,
             "language_name": result.language,
             "is_generated": result.is_generated,
             "text": text,
+            "segments": segments,
             "word_count": len(text.split()),
         }
     except Exception as e:
